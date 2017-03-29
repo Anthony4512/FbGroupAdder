@@ -4,15 +4,16 @@
     This Program passes facebook groups from one user to another
 
 """
+
 import mechanicalsoup
+import time
 from bs4 import BeautifulSoup
 import re
 
-
 login_url = "https://m.facebook.com/"
-login = "ENTER EMAIL"   # THIS IS THE USERNAME/EMAIL/USER-ID OF THE SENDER
-password = "ENTER PASSWORD"    # THIS IS THE PASSWORD OF THE SENDER
-home = "https://m.facebook.com/home.php"     # URL IS ON MOBILE BECAUSE IT DOESN'T CONTAIN AJAX
+login =  "Change this with Username, email or ID of sender"# "//THIS IS THE USERNAME/EMAIL/USER-ID OF THE SENDER
+password = "Change this with Password of the sender" # // THIS IS THE PASSWORD OF THE SENDER
+home = "https://m.facebook.com/home.php"                # URL IS ON MOBILE BECAUSE IT DOESN'T CONTAIN AJAX
 
 
 def login_to_fb(browser):  # function for login in to fb, takes the browser object created at main()
@@ -44,7 +45,7 @@ def write_groups_to_text(browser):  # write down the groups to the linea.txt fil
         url = link.get("href")
         with open('linea.txt', 'a') as f:  # opens linea.txt to append text
             f.write(str(url.encode(encoding='utf8')))  # writes all found url to the linea.txt file
-            f.close()  # close file
+    f.close()  # close file
 
 
 def get_all_groups():  # gets only numbers from the linea file and writes them down in to a file called groups.txt
@@ -52,55 +53,62 @@ def get_all_groups():  # gets only numbers from the linea file and writes them d
     with open('linea.txt', 'r') as f:  # reads the html file 'linea.txt' which is in html
         my_s = f.readlines()
     lines = str(my_s)
-    count = re.findall(r'\b\d+\b', lines)  # filters out only numbers
-    for number in count:  # iterate through all the numbers in count
-        if len(number) > 12:  # let only numbers with a length greater than 12
-            with open("groups.txt", 'a') as f:  # opens groups.txt file
-                f.write(number+'\n')            # appends the number to groups.txt
-            group_list.append(number)           # appends the number to the list that is returned
+    count = re.findall(r'\b\d+\b', lines)  # TODO I need to get to know what this peace of code do
+    for number in count:
+        if len(number) > 12:
+            # print(number)
+            # test = browser.get(test_group_url + number)
+            # if "groups/members" in test.text:
+            with open("groups.txt", 'a') as f:
+                f.write(number+'\n')
+            group_list.append(number)
         else:
             pass
     return group_list
 
 
-def send_groups(browser, groups):  # TODO use the receiver_id to customize the program
-
+def send_groups(browser, groups, receiver_id):
     send_group_url = "https://m.facebook.com/groups/members/search/?group_id="
-
-    # list of suggested friends by fb...  use it to modify it and with the sender information and submit form
-    suggested_friends = ["ENTER FRIENDS ID", "ENTER FRIENDS ID", "ENTER FRIENDS ID", "ENTER FRIENDS ID",
-                         "ENTER FRIENDS ID", "ENTER FRIENDS ID", "ENTER FRIENDS ID", "ENTER FRIENDS ID",
-                         "ENTER FRIENDS ID"]
     # name_of_input = "addees[" + str(receiver_id) + "]"
-    for group_id in groups:  # loops through the group's list
-        for friend in suggested_friends:  # loops through the suggested_friends list
-            send_page = browser.get(send_group_url + str(group_id))  # navigates to the group that is going to be send
-            soup = BeautifulSoup(send_page.text, "html.parser")  # parse the html on the send_page
-            checkbox_form = soup.find("form", {"method": "post"})  # extract the form
 
-            try:
-                checkbox_form.find('input', {"value": friend})["checked"] = "checked"
-                checkbox_form.find('input', {"value": friend})["name"] = "addees[" + sender_id + "]"
-                checkbox_form.find('input', {"value": friend})["value"] = sender_id
-                browser.submit(checkbox_form, send_page.url)
-                print("pasando group number: " + str(group_id))
-                break
-            except Exception as e:
-                print(e)
-                pass
+    print(groups)
+    for group_id in groups:
+        time.sleep(0.1)
+        send_page = browser.get(send_group_url + str(group_id))
+        soup = BeautifulSoup(send_page.text, "html.parser")
+        checkbox_form = soup.find("form", {"method": "post"})
+        try:
+            # this one works without sugested_friends list
+            # finds the input thats type text --- not the one with sugested friends
+            checkbox_form.find('input', {"type": "text"})["checked"] = "checked"
+            checkbox_form.find('input', {"type": "text"})["name"] = "addees[" + str(receiver_id) + "]"
+            checkbox_form.find('input', {"type": "text"})["value"] = str(receiver_id)
+            resp = browser.submit(checkbox_form, send_page.url) # use res = my_browser.submit & print response for debug
+            # soup = BeautifulSoup(resp.text, "html.parser") //for debug
+            # print(soup.prettify())  //for debug
+            print("pasando group number: " + str(group_id))
+        except Exception as e:
+            # print("grupo " + group_id + " no tranferido.")
+            # print(e)
+            pass
+
+# print(get_all_groups(browser))  //for debug
 
 
-def main():
-    browser = mechanicalsoup.Browser()  # creates a browser object
-    # recibidor = input("Entre ID del recibidor: ")
+def main():    
+    browser = mechanicalsoup.Browser()
+    print("created browser")
+    recibidor = int(input("Entre ID del recibidor: "))
     login_to_fb(browser)
+    print("used login func, now going o getallgroups")
     # write_groups_to_text(browser)  # //Use this function only to write the down the groups to a file
     groups = get_all_groups()
-
+    print("entering the if")
     if groups:
         print("Pasando grupos... Favor espere!  ")
-        send_groups(browser, groups)
+        send_groups(browser, groups, recibidor)
         print("Creo que todo salio bien!!")
+    print("exiting the if")
 
 
 if __name__ == "__main__":
